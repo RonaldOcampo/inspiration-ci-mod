@@ -1,24 +1,24 @@
-<div class="" ng-show="testsPassed">
+<div class="" ng-show="testsPassed && !testsRunning">
     <br/>
-    <img class="col-lg-4 col-lg-offset-4" ng-src="{{inspirationalPic}}"/>       
+        <img class="col-lg-4 col-lg-offset-4" ng-src="{{inspirationalPic}}"/>
 
-    <!--  Carousel of all Tests when passing -->  
-    <div id="all-build-carousel" class="carousel slide" ng-show="!testsRunning">
-        <div class="carousel-inner">
-            
-            <div class="text-center item build-status-box" ng-repeat="build in allBuilds">
-                <div data-model="{{build.id}}">
-                    <h2>{{build.project}}</h2>
-                    <h1>{{build.name}}</h1>
-                    <h3><a href="{{build.webUrl}}" class="build-status" target="_new">
-                        Build {{build.version}} [{{build.status}}]
-                    </a></h3>
+        <!--  Carousel of all Tests when passing -->
+        <div id="all-build-carousel" class="carousel slide" ng-show="!testsRunning">
+            <div class="carousel-inner">
+
+                <div class="text-center item build-status-box" ng-repeat="build in allBuilds">
+                    <div data-model="{{build.id}}">
+                        <h2>{{build.project}}</h2>
+                        <h1>{{build.name}}</h1>
+                        <h3><a href="{{build.webUrl}}" class="build-status" target="_new">
+                            Build {{build.version}} [{{build.status}}]
+                        </a></h3>
+                    </div>
                 </div>
-            </div>
 
 
 
-        </div><!-- /.carousel-inner -->
-    </div>        
-    <!-- /Carousel -->
+            </div><!-- /.carousel-inner -->
+        </div>
+        <!-- /Carousel -->
 </div>

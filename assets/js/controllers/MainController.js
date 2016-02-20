@@ -36,12 +36,12 @@ angular.module('inspirationCi')
   }); //end of handling build updates.
 
 
-  //change inspirational image every 30 seconds.
+  //change inspirational image every 15 seconds.
   setInterval(function(){
     $scope.$apply(function(){
       updateInspirationalPoster($scope);
     });    
-  }, 30000);
+  }, 15000);
 
 });
 
@@ -105,8 +105,8 @@ function updateModelsWithBuildStatus(update, $scope) {
 // before starting the carousels.
 function initCarousels(){
   $('#all-build-carousel .item:first').addClass('active');
-  $('#all-build-carousel').carousel({interval: 10000});   
-  $('#running-build-carousel').carousel({interval: 10000});
+  $('#all-build-carousel').carousel({interval: 5000});
+  $('#running-build-carousel').carousel({interval: 5000});
 }
 
 

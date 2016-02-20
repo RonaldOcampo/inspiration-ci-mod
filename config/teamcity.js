@@ -1,6 +1,6 @@
 
 module.exports.teamcity = {
 
-	apiUrl:"http://teamcity/guestAuth/app/rest"
+	apiUrl:"http://ci.mia.ucloud.int/app/rest"
 
 };

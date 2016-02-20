@@ -29,20 +29,23 @@ module.exports = {
 			
 			//Get build types.
 			var buildTypesRestApiUrl = teamCityConfig.apiUrl + "/buildTypes";		
-			rest.get(buildTypesRestApiUrl).on('complete', function(data){
+			rest.get(buildTypesRestApiUrl, { username: 'ronaldo', password: 'REPLACE ME'}).on('complete', function(data){
 
 				for(var i=0; i < data.buildTypes.buildType.length; i++) {
 					var buildTypeEntry = data.buildTypes.buildType[i].$;				
 
-					Build.create({
-						id: buildTypeEntry.id,
-						name: buildTypeEntry.name,
-						project: buildTypeEntry.projectName,
-						webUrl: buildTypeEntry.webUrl,
-						state: 'UNKNOWN',
-						status: 'UNKNOWN',
-						lastUpdated: new Date(0)
-					}).exec(function(err, model){});
+					if(buildTypeEntry.id.indexOf('ucp_HothDnsApi') > -1) {
+						Build.create({
+							id: buildTypeEntry.id,
+							name: buildTypeEntry.name,
+							project: buildTypeEntry.projectName,
+							webUrl: buildTypeEntry.webUrl,
+							state: 'UNKNOWN',
+							status: 'UNKNOWN',
+							lastUpdated: new Date(0)
+						}).exec(function (err, model) {
+						});
+					}
 				}
 
 				processAllBuildTypesTask.resolve();
@@ -100,14 +103,27 @@ function setupProjectUpdatePolling() {
 function pollRunningProjects() {
 	var promise = new Deferred();
 	var queryRunningBuilds = teamCityConfig.apiUrl + "/builds?locator=running:true";
-	rest.get(queryRunningBuilds).on('complete', function(data){				
+	rest.get(queryRunningBuilds, { username: 'ronaldo', password: 'REPLACE ME'}).on('complete', function(data){
 		console.log("checking builds in progress:", data);
 
+		var checkArray = [];
+		if(parseInt(data.builds.$.count) > 0) {
+			for (var i = 0; i < data.builds.build.length; i++) {
+				(function (currentBuild) {
+					console.log("checking currentBuild: ", currentBuild.buildTypeId);
+					if (currentBuild.buildTypeId.indexOf('ucp_HothDnsApi') > -1) {
+						checkArray.push(currentBuild.buildTypeId)
+					}
+				})(data.builds.build[i].$);
+			}
+		}
+		console.log("checkArray: ", checkArray);
 		// It was observed that sometimes returned data does not contain
 		// results in expected format.
 		try {
-			if(parseInt(data.builds.$.count) <= 0) {
-				console.log("no build in progress");								
+			//if(parseInt(data.builds.$.count) <= 0) {
+			if(parseInt(checkArray.length) <= 0) {
+				console.log("no build in progress");
 				promise.resolve();
 				return;
 			} else {
@@ -126,16 +142,17 @@ function pollRunningProjects() {
 		
 		for(var i=0; i < data.builds.build.length; i++) {					
 			(function(currentBuild){
-				var updatePromise = new Deferred();
-				promiseArray.push(updatePromise);
+				if(currentBuild.buildTypeId.indexOf('ucp_HothDnsApi') > -1) {
+					var updatePromise = new Deferred();
+					promiseArray.push(updatePromise);
 
-				console.log("current build in progress", currentBuild);
-				Build.findOne({id:currentBuild.buildTypeId}).exec(function(err, foundModel){
-					updateModel(foundModel, currentBuild, function(){
-						updatePromise.resolve();
+					console.log("current build in progress", currentBuild);
+					Build.findOne({id:currentBuild.buildTypeId}).exec(function(err, foundModel){
+						updateModel(foundModel, currentBuild, function(){
+							updatePromise.resolve();
+						});
 					});
-				});
-
+				}
 			})(data.builds.build[i].$);
 		}
 
@@ -158,38 +175,40 @@ function pollRecentlyCompleted(lastBuildId) {
 	}
 
 	console.log("checking last builds: ", lastcompletedBuildsQuery);
-	rest.get(lastcompletedBuildsQuery).on('complete', function(data){
+	rest.get(lastcompletedBuildsQuery, { username: 'ronaldo', password: 'REPLACE ME'}).on('complete', function(data){
 		
 		if(data.builds.$.count == 0) {
-			console.log("no new updates in recently complated projects");
+			console.log("no new updates in recently completed projects");
 			promise.resolve(lastBuildId);
 			return;
 		}
 
-		console.log("Found recently complated projects.");
+		console.log("Found recently completed projects.");
 
 		//track processed projects so we don't overwrite a more recent result with an older one.
 		var processedProjects = {};
 
 		// For each build we see in our updates.
 		for(var i=0; i < data.builds.build.length; i++) {
-			(function(currentBuild){
+			(function(currentBuild) {
+				if (currentBuild.buildTypeId.indexOf('ucp_HothDnsApi') > -1) {
 
-				//skip processing if we have already processed it.
-				if(processedProjects[currentBuild.buildTypeId] == true)
-					return;
-
-				Build.findOne({id:currentBuild.buildTypeId}).exec(function(err, foundModel){
-					processedProjects[foundModel.id] = true;
-					
-					// if we have newer info than the one we fetched.
-					// (this can happen during initializating.)
-					if( foundModel.version != null && compareVersion(currentBuild.number, foundModel.version) < 0)						
+					//skip processing if we have already processed it.
+					if (processedProjects[currentBuild.buildTypeId] == true)
 						return;
 
-					updateModel(foundModel, currentBuild);					
-				});
-				
+					Build.findOne({id: currentBuild.buildTypeId}).exec(function (err, foundModel) {
+						processedProjects[foundModel.id] = true;
+
+						// if we have newer info than the one we fetched.
+						// (this can happen during initializating.)
+						if (foundModel.version != null && compareVersion(currentBuild.number, foundModel.version) < 0)
+							return;
+
+						updateModel(foundModel, currentBuild);
+					});
+
+				}
 			})(data.builds.build[i].$);
 		}
 
@@ -201,7 +220,8 @@ function pollRecentlyCompleted(lastBuildId) {
 }
 
 function updateModel(buildModel, updatedData, callback) {
-	console.log("updating build model for build", buildModel.name);
+	console.log("updating build model for build", buildModel);
+	console.log("updated data for build", updatedData);
 	buildModel.status = updatedData.status;
 	buildModel.state = updatedData.state;								
 	buildModel.version = updatedData.number;
@@ -238,7 +258,7 @@ function updateBuildStatusForBuild(currentBuildModel, callback) {
 		+ "/buildTypes/" + currentBuildModel.id
 		+ "/builds?count=1";
 
-	rest.get(getBuildStatusUrl).on('complete', function(data){
+	rest.get(getBuildStatusUrl, { username: 'ronaldo', password: 'REPLACE ME'}).on('complete', function(data){
 		if (data.builds.$.count !== '0') {
             var lastBuildOfProject = data.builds.build[0].$;
             updateModel(currentBuildModel, lastBuildOfProject);
